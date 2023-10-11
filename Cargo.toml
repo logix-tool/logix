@@ -1,6 +1,6 @@
 [package]
 name = "logix"
-version = "0.1.0"
+version = "0.2.0"
 description = "An experimental command-line tool for simplified and enhanced configuration management across multiple systems."
 repository = "https://github.com/logix-tool/logix"
 edition = "2021"
