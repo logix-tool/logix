@@ -1,13 +1,15 @@
 [package]
 name = "logix"
 version = "0.1.0"
+description = "An experimental command-line tool for simplified and enhanced configuration management across multiple systems."
+repository = "https://github.com/logix-tool/logix"
 edition = "2021"
 authors = [
-  "Bjørn Ove Hay Andersen <bjrnove@gmail.com>"
+  "Bjørn Ove Hay Andersen <bjrnove@gmail.com>",
+  "Gigantos <gigantos@gigantos.net>",
 ]
 readme = "README.md"
 license = "MPL-2.0"
-license-file = "LICENSE"
 categories = ["command-line-utilities", "config"]
 
 [badges]
