@@ -21,20 +21,20 @@ Logix is in an experimental phase, primarily focused on meeting the needs of its
 This is a config file example
 */
 Logix { // The root of a config is always Logix
-  profiles: [ // a list of profiles, usually only one
-    User { // A user profile (other types may be added later)
-      login: "zeldor"
+  profiles: { // a list of profiles, usually only one
+    // The key is the username, this helps in avoiding duplicates
+    zeldor: User { // A user profile (other types may be added later)
       name: "Zeldon Kingly"
       email: "zeldor@example.com"
       shell: Bash {
-        bashrc: @include String "configs/bashrc"
+        bashrc: @include("configs/bashrc")
       }
       // ssh config, using the Open ssh provider
       ssh: OpenSSH {
         // Use the systemd version of the agent
         agent: SystemD
         keys: {
-          github: @include Tpm "ssh-keys/github"
+          github: @include("ssh-keys/github")
         }
       }
     }
