@@ -27,7 +27,7 @@ Logix { // The root of a config is always Logix
       name: "Zeldon Kingly"
       email: "zeldor@example.com"
       shell: Bash {
-        bashrc: @include("configs/bashrc")
+        bashrc: @include("config/bashrc")
       }
       // ssh config, using the Open ssh provider
       ssh: OpenSSH {

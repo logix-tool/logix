@@ -6,11 +6,22 @@ pub enum Shell {
 }
 
 #[derive(LogixType)]
+pub enum SshAgent {
+    SystemD,
+}
+
+#[derive(LogixType)]
+pub enum Ssh {
+    OpenSSH { agent: SshAgent, keys: Map<String> },
+}
+
+#[derive(LogixType)]
 pub enum Profile {
     User {
         name: String,
         email: String,
         shell: Shell,
+        ssh: Ssh,
     },
 }
 
