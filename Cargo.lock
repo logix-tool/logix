@@ -238,9 +238,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9186c099e74c0d91d3ce6b2991d91019505fa484662682cc42e822a3e8db9c8b"
+checksum = "7a8cfe37d1d9dd9d09fb78b6b1c8b7c517178eb5722ab78b3ce527c21b4c2f99"
 dependencies = [
  "bstr",
  "indexmap",
@@ -254,9 +254,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type-derive"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60e1919656402c54bb69ca70cf9454b51e68ed6745a439ee2e1de4ed1f5b8f2a"
+checksum = "5340eba432cee1c2eb37fb9778b0ad512919711564d9695f20698807788fc376"
 dependencies = [
  "proc-macro2",
  "quote",

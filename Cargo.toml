@@ -18,7 +18,7 @@ maintainance = { status = "experimental" }
 [dependencies]
 clap = { version = "4.4.8", features = ["derive"] }
 directories = "5.0.1"
-logix-type = "0.4.0"
+logix-type = "0.4.1"
 logix-vfs = "0.6.0"
 tempfile = "3.8.1"
 thiserror = "1.0.50"
