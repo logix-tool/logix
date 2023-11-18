@@ -1,31 +1,39 @@
-use logix_type::{LogixType, Map};
+use logix_type::{types::Data, LogixType, Map};
 
-#[derive(LogixType)]
+mod env;
+mod error;
+
+pub use crate::{
+    env::Env,
+    error::{Error, Result},
+};
+
+#[derive(Debug, LogixType)]
 pub enum Shell {
-    Bash { bashrc: String },
+    Bash { bashrc: Data<String> },
 }
 
-#[derive(LogixType)]
+#[derive(Debug, LogixType)]
 pub enum SshAgent {
     SystemD,
 }
 
-#[derive(LogixType)]
+#[derive(Debug, LogixType)]
 pub enum Ssh {
     OpenSSH { agent: SshAgent, keys: Map<String> },
 }
 
-#[derive(LogixType)]
+#[derive(Debug, LogixType)]
 pub enum Profile {
     User {
         name: String,
         email: String,
-        shell: Shell,
-        ssh: Ssh,
+        shell: Option<Shell>,
+        ssh: Option<Ssh>,
     },
 }
 
-#[derive(LogixType)]
+#[derive(Debug, LogixType)]
 pub struct Logix {
     pub profiles: Map<Profile>,
 }
