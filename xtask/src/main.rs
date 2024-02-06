@@ -25,7 +25,7 @@ impl Vars {
 enum Action<'a> {
     Cargo(&'a str, &'a [&'a str]),
     Call(&'static (dyn Fn(&Vars) + Sync)),
-    RunAction(&'a str),
+    Run(&'a str),
 }
 
 use Action::*;
@@ -35,21 +35,21 @@ static ACTIONS: &[(&str, &[Action])] = &[
         "before-pr",
         &[
             Cargo("update", &[]),
-            RunAction("lints"),
-            RunAction("build-all"),
-            RunAction("all-tests"),
-            RunAction("all-checks"),
+            Run("lints"),
+            Run("build-all"),
+            Run("all-tests"),
+            Run("all-checks"),
         ],
     ),
     (
         "all-checks",
         &[
             Cargo("deny", &["check"]),
-            // TODO(2024.02): Cargo("semver-checks", &[]),
+            // TODO(2023.10): Cargo("semver-checks", &[]),
             Cargo("outdated", &["--exit-code", "1"]),
-            // TODO(2024.02): NightlyCargo("udeps", &[]),
-            // TODO(2024.02): Cargo("audit", &[]),
-            // TODO(2024.02): Cargo("pants", &[]),
+            // TODO(2023.10): NightlyCargo("udeps", &[]),
+            // TODO(2023.10): Cargo("audit", &[]),
+            // TODO(2023.10): Cargo("pants", &[]),
         ],
     ),
     (
@@ -210,7 +210,7 @@ fn main() {
         match *action {
             Action::Cargo(cmd, args) => cargo_cmd(cmd, args, &vars),
             Action::Call(clb) => clb(&vars),
-            Action::RunAction(name) => {
+            Action::Run(name) => {
                 tasks.extend(
                     ACTIONS
                         .iter()
