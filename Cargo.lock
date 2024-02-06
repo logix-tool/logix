@@ -239,9 +239,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8cfe37d1d9dd9d09fb78b6b1c8b7c517178eb5722ab78b3ce527c21b4c2f99"
+checksum = "37a795424f3cfa463dc982848aaed690cb90bbb7e5e8e04da112b9f1503b3478"
 dependencies = [
  "bstr",
  "indexmap",
@@ -255,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type-derive"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5340eba432cee1c2eb37fb9778b0ad512919711564d9695f20698807788fc376"
+checksum = "90461b050d2cb1881a305b8f8ace97892ce7ea71039984cfbd4052e98e5dbcf5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -266,9 +266,9 @@ dependencies = [
 
 [[package]]
 name = "logix-vfs"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "128fa3d242c48ee0d2c85d14b006e5e89fae284c872545bae51defddf3157769"
+checksum = "004a43aafa573e5be22b92ad02437feecfff0b5ce11f7b9e1517ba493de75a16"
 dependencies = [
  "thiserror",
 ]
