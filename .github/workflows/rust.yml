@@ -15,8 +15,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
+    - uses: actions/checkout@v4
+
+    - uses: logix-tool/github-actions/cargo-deny@main
+      with:
+          token: ${{ secrets.READ_PUBLIC_TOKEN }}
+
+    - uses: logix-tool/github-actions/cargo-semver-checks@main
+      with:
+          token: ${{ secrets.READ_PUBLIC_TOKEN }}
+
+    - name: Run linters
+      run: |
+          cargo xtask lints
+
+    - name: Run build
+      run: |
+          cargo xtask build-all
+
+    - name: Run checks
+      run: |
+          cargo xtask all-checks
+
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+          cargo xtask all-tests

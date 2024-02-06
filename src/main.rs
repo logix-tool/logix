@@ -1,8 +1,6 @@
-use std::path::PathBuf;
+#![deny(warnings, clippy::all)]
 
-use logix::{Error, Logix};
-use logix_type::LogixLoader;
-use logix_vfs::RelFs;
+use logix::{env::Env, Logix};
 
 #[derive(clap::Parser)]
 #[command(author, version, about, long_about)]
@@ -10,18 +8,12 @@ use logix_vfs::RelFs;
 struct Args {
     #[command(subcommand)]
     command: Command,
-
-    /// Directory where the config is located, use print-env to see the default
-    #[clap(global = true, long)]
-    config_dir: Option<PathBuf>,
-
-    /// The root config file to load
-    #[clap(global = true, long, default_value = "root.logix")]
-    root_config: String,
 }
 
 #[derive(clap::Subcommand)]
 enum Command {
+    /// Get the status of your system
+    Status {},
     /// Create a plan based on the current config
     Plan {},
     Print {
@@ -32,34 +24,25 @@ enum Command {
 
 #[derive(clap::Subcommand)]
 enum PrintCmd {
-    /// Calculate then print the environment that would used by other commands
-    Env {},
-    /// Load, then print the config
+    /// Load and then print the resolved config
     Config {},
 }
 
-fn main() -> logix::Result<()> {
+fn main() -> logix::error::Result<()> {
     let args = <Args as clap::Parser>::parse();
 
-    let dirs =
-        directories::ProjectDirs::from("com", "logix-tool", "logix").ok_or(Error::LocateHome)?;
-
-    let env = logix::Env {
-        config_root: args.config_dir.as_deref().unwrap_or(dirs.config_dir()),
-    };
-
-    let mut loader = LogixLoader::new(RelFs::new(env.config_root));
+    let logix = Logix::load(Env::init()?)?;
 
     match args.command {
+        Command::Status {} => {
+            let status = logix.calculate_status();
+            println!("{status:#?}");
+        }
         Command::Plan {} => {}
-        Command::Print {
-            cmd: PrintCmd::Env {},
-        } => println!("{env:#?}"),
         Command::Print {
             cmd: PrintCmd::Config {},
         } => {
-            let config = loader.load_file::<Logix>(&args.root_config)?;
-            println!("{config:#?}");
+            println!("{:#?}", logix.config());
         }
     }
 

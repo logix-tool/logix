@@ -1,4 +1,4 @@
-use logix::Logix;
+use logix::config::Logix;
 use logix_type::LogixLoader;
 use logix_vfs::RelFs;
 
