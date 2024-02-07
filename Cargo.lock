@@ -274,6 +274,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "logix-xtask"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1b25eaab71f5b450cb00d1b3863467ed0912b86c02926a7796c7784e86f248a"
+
+[[package]]
 name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -658,3 +664,6 @@ checksum = "dff9641d1cd4be8d1a070daf9e3773c5f67e78b4d9d42263020c057706765c04"
 [[package]]
 name = "xtask"
 version = "0.4.1"
+dependencies = [
+ "logix-xtask",
+]
