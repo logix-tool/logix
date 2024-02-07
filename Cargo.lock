@@ -239,9 +239,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37a795424f3cfa463dc982848aaed690cb90bbb7e5e8e04da112b9f1503b3478"
+checksum = "018646c8f1c68fc1511b85dde4601db88e0c8aaae91299f1d5b7c5345b4bcb86"
 dependencies = [
  "bstr",
  "indexmap",
@@ -255,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "logix-type-derive"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90461b050d2cb1881a305b8f8ace97892ce7ea71039984cfbd4052e98e5dbcf5"
+checksum = "6e86cf7366f4e7ed3a7998e6b98240339ef75a72d92dd3d7d5dcd7c2e23dcd01"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -266,18 +266,18 @@ dependencies = [
 
 [[package]]
 name = "logix-vfs"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "004a43aafa573e5be22b92ad02437feecfff0b5ce11f7b9e1517ba493de75a16"
+checksum = "22b3209d7c38318cdb39bbc9cf5affbbf3d50aca86e7cb063f1da9dd5ae6eeba"
 dependencies = [
  "thiserror",
 ]
 
 [[package]]
 name = "logix-xtask"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1b25eaab71f5b450cb00d1b3863467ed0912b86c02926a7796c7784e86f248a"
+checksum = "d225d4ad6984d5f563b14cac395332b98aef1c83e3371d317b4e1c5c77509d5b"
 
 [[package]]
 name = "memchr"
