@@ -15,8 +15,8 @@ maintainance = { status = "experimental" }
 [dependencies]
 clap = { version = "4.5.9", features = ["derive"] }
 dirs = "5.0.1"
-logix-type = "0.9.0"
-logix-vfs = "0.7.0"
+logix-type = "0.10.0"
+logix-vfs = "0.8.0"
 tempfile = "3.10.1"
 thiserror = "1.0.61"
 walkdir = "2.5.0"
@@ -27,10 +27,9 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.1"
+version = "0.3.0"
 authors = [
-  "Bjørn Ove Hay Andersen <bjrnove@gmail.com>",
   "Gigantos <gigantos@gigantos.net>",
 ]
-license = "MPL-2.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
