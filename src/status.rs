@@ -1,5 +1,6 @@
 use crate::{error::Error, managed_file::CmpRes, ManagedFile};
 
+/// Contains the status for a set of managed files
 #[derive(Debug)]
 pub struct Status {
     modified: Vec<ManagedFile>,
@@ -30,22 +31,28 @@ impl Status {
         Ok(ret)
     }
 
+    /// Return a slice with all the modified files
     pub fn modified(&self) -> &[ManagedFile] {
         &self.modified
     }
 
+    /// Return a slice with all the files that logix expects, but who is missing from both the
+    /// logix directory and the user directory
     pub fn missing(&self) -> &[ManagedFile] {
         &self.missing
     }
 
+    /// Return a slice with all the files that logix does not manage, yet are in the user directory
     pub fn local_added(&self) -> &[ManagedFile] {
         &self.local_added
     }
 
+    /// Return a slice with all the files that logix expects, but is missing from the user directory
     pub fn logix_added(&self) -> &[ManagedFile] {
         &self.logix_added
     }
 
+    /// Return a slice with all the files that are up to date
     pub fn up_to_date(&self) -> &[ManagedFile] {
         &self.up_to_date
     }

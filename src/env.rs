@@ -37,6 +37,7 @@ impl ShadowedDir {
     }
 }
 
+/// Contains a pre-calculated version of the environment such as various directories.
 pub struct Env {
     /// ~/.config <-> ~/.config/logix/config
     user_config: ShadowedDir,

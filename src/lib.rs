@@ -14,12 +14,15 @@ pub mod managed_files;
 pub mod status;
 mod walk_dir;
 
+/// This is the root of a logix session. Most functionality will start
+/// by creating an instance of this struct
 pub struct Logix {
     env: Env,
     config: config::Logix,
 }
 
 impl Logix {
+    /// Load the logix instance from the specified environment. This includes loading the config files.
     pub fn load(env: Env) -> Result<Self, Error> {
         let mut loader = LogixLoader::new(RelFs::new(env.logix_root()));
         Ok(Self {
@@ -28,10 +31,12 @@ impl Logix {
         })
     }
 
+    /// Retrieve the raw config
     pub fn config(&self) -> &config::Logix {
         &self.config
     }
 
+    /// Returns a list of files managed by logix
     pub fn calculate_managed_files(&self) -> Result<Vec<ManagedFile>, Error> {
         let config::Logix { home } = &self.config;
         let mut ret = ManagedFiles::new(&self.env);
@@ -82,6 +87,7 @@ impl Logix {
         Ok(ret.finalize())
     }
 
+    /// Calculate the status of all the files managed by logix
     pub fn calculate_status(&self) -> Result<Status, Error> {
         Status::calculate(self)
     }
