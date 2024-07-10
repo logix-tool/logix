@@ -1,4 +1,4 @@
-use logix::{status::Status, ManagedFile};
+use logix::{managed_file::ManagedFile, status::Status};
 
 mod helper;
 
@@ -9,7 +9,22 @@ Logix {
     name: "Zeldon Kingly"
     email: "zeldor@example.com"
     shell: Bash
-    editor: Helix
+    editor: "hx"
+    packages: {
+      helix: Custom {
+        source: GitHub {
+          owner: "helix-editor"
+          repo: "helix"
+        }
+        config_dir: User {
+          filter: Filter {
+            ignore_starts_with: [
+                "runtime/"
+            ]
+          }
+        }
+      }
+    }
   }
 }
 "#;

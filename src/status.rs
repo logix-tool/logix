@@ -1,4 +1,4 @@
-use crate::{error::Error, CmpRes, ManagedFile};
+use crate::{error::Error, managed_file::CmpRes, ManagedFile};
 
 #[derive(Debug)]
 pub struct Status {

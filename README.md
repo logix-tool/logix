@@ -26,7 +26,7 @@ Logix { // The root of a config is always Logix
     name: "Zeldon Kingly"
     email: "zeldor@example.com"
     shell: Bash
-    editor: Helix
+    editor: "hx"
     // ssh config, using the Open SSH provider
     ssh: OpenSSH {
       // Use the systemd version of the agent

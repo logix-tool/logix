@@ -1,88 +1,18 @@
-#![deny(warnings, clippy::all)]
-
-use std::path::PathBuf;
-
 use crate::{env::Env, error::Error, status::Status};
-use env::Filter;
+use config::{ConfigDir, Filter, Package};
 use logix_type::LogixLoader;
 use logix_vfs::RelFs;
+use managed_file::ManagedFile;
+use managed_files::ManagedFiles;
 
+pub mod based_path;
 pub mod config;
 pub mod env;
 pub mod error;
+pub mod managed_file;
+pub mod managed_files;
 pub mod status;
-
-pub enum CmpRes {
-    UpToDate,
-    Missing,
-    LocalAdded,
-    LogixAdded,
-    Modified,
-}
-
-impl CmpRes {
-    fn diff_files(a: Vec<u8>, b: Vec<u8>) -> CmpRes {
-        if a == b {
-            Self::UpToDate
-        } else {
-            Self::Modified
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct LocalFile {
-    pub local: PathBuf,
-    pub logix: PathBuf,
-}
-
-impl LocalFile {
-    fn compare_files(&self) -> Result<CmpRes, Error> {
-        let Self { local, logix } = self;
-        if local.exists() {
-            if logix.exists() {
-                let a = std::fs::read(local).map_err(Error::ReadForDiff)?;
-                let b = std::fs::read(logix).map_err(Error::ReadForDiff)?;
-                Ok(CmpRes::diff_files(a, b))
-            } else {
-                Ok(CmpRes::LocalAdded)
-            }
-        } else if logix.exists() {
-            Ok(CmpRes::LogixAdded)
-        } else {
-            Ok(CmpRes::Missing)
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct VirtualFile {
-    local: PathBuf,
-    content: String,
-}
-
-impl VirtualFile {
-    fn compare_files(&self) -> Result<CmpRes, Error> {
-        todo!()
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ManagedFile {
-    Local(LocalFile),
-    Virtual(VirtualFile),
-    Recommend(LocalFile),
-}
-
-impl ManagedFile {
-    pub fn compare_files(&self) -> Result<CmpRes, Error> {
-        match self {
-            Self::Local(file) => file.compare_files(),
-            Self::Virtual(file) => file.compare_files(),
-            Self::Recommend(file) => file.compare_files(),
-        }
-    }
-}
+mod walk_dir;
 
 pub struct Logix {
     env: Env,
@@ -91,7 +21,7 @@ pub struct Logix {
 
 impl Logix {
     pub fn load(env: Env) -> Result<Self, Error> {
-        let mut loader = LogixLoader::new(RelFs::new(env.logix_config_dir()));
+        let mut loader = LogixLoader::new(RelFs::new(env.logix_root()));
         Ok(Self {
             env,
             config: loader.load_file("root.logix")?,
@@ -104,27 +34,19 @@ impl Logix {
 
     pub fn calculate_managed_files(&self) -> Result<Vec<ManagedFile>, Error> {
         let config::Logix { home } = &self.config;
-        let mut ret = Vec::new();
+        let mut ret = ManagedFiles::new(&self.env);
         {
             let config::UserProfile {
                 username: _,
                 name: _,
                 email: _,
                 shell,
-                editor,
+                editor: _,
                 ssh,
+                packages,
             } = home;
             match shell {
-                Some(config::Shell::Bash) => {
-                    ret.extend([self.env.calculate_managed_dotfile(".bashrc")])
-                }
-                None => {}
-            }
-            match editor {
-                Some(config::Editor::Helix) => {
-                    self.env
-                        .calculate_managed_config_dir("helix", &mut ret, Filter::HELIX)?
-                }
+                Some(config::Shell::Bash) => ret.add_dotfile(".bashrc")?,
                 None => {}
             }
             match ssh {
@@ -132,16 +54,32 @@ impl Logix {
                     agent: config::SshAgent::SystemD,
                     keys,
                 }) => {
-                    ret.push(
-                        self.env
-                            .calculate_managed_config_file("systemd/user/ssh-agent.service"),
-                    );
+                    ret.add_config_file("systemd/user/ssh-agent.service")?;
                     debug_assert!(keys.is_empty(), "TODO: {keys:?}");
                 }
                 None => {}
             }
+            for (pname, p) in packages {
+                match p {
+                    Package::Custom {
+                        source: _,
+                        config_dir,
+                    } => match config_dir {
+                        ConfigDir::User {
+                            package_name,
+                            filter,
+                        } => ret.add_dir(
+                            &self
+                                .env
+                                .user_config()
+                                .make_shadowed_subdir(package_name.as_ref().unwrap_or(pname))?,
+                            filter.as_ref().unwrap_or(Filter::EMPTY),
+                        )?,
+                    },
+                }
+            }
         }
-        Ok(ret)
+        Ok(ret.finalize())
     }
 
     pub fn calculate_status(&self) -> Result<Status, Error> {
