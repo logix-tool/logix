@@ -1,4 +1,4 @@
-use std::{fmt, rc::Rc, sync::Mutex};
+use std::{fmt, rc::Rc};
 
 use logix::{
     based_path::BasedPath,
@@ -7,8 +7,6 @@ use logix::{
     Logix,
 };
 use logix_type::types::FullPath;
-
-static GLOBAL_LOCK: Mutex<()> = Mutex::new(());
 
 struct Inner {
     home: BasedPath,
@@ -64,14 +62,13 @@ impl TestFs {
     }
 
     pub fn init_env(&self) -> Loaded<Env> {
-        let _lock = GLOBAL_LOCK.lock().unwrap();
-        let org_home = std::env::var_os("HOME").unwrap();
-        std::env::set_var("HOME", &self.inner.home); // TODO: This is not enough to trick directories on all platforms
-        let env = Env::init();
-        std::env::set_var("HOME", org_home);
         Loaded {
             inner: self.inner.clone(),
-            value: env.unwrap(),
+            value: Env::builder()
+                .home_dir(self.inner.home.as_full_path().clone())
+                .config_dir(self.inner.local_config.as_full_path().clone())
+                .build()
+                .unwrap(),
         }
     }
 

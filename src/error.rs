@@ -12,6 +12,9 @@ pub enum Error {
     #[error("Failed to determine the {0} directory")]
     LocateDir(&'static str),
 
+    #[error("Missing {0} directory")]
+    MissingDir(&'static str),
+
     #[error("Invalid {0} directory: {1}")]
     InvalidDir(&'static str, PathError),
 

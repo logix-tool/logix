@@ -37,6 +37,71 @@ impl ShadowedDir {
     }
 }
 
+/// Builder used to specify the environment to use when initializing [Env], created by calling [Env::builder]
+pub struct EnvBuilder {
+    home_dir: Option<FullPath>,
+    config_dir: Option<FullPath>,
+}
+
+impl EnvBuilder {
+    /// Fill in any missing data from the OS environment
+    pub fn init_from_os_env(&mut self) -> Result<&mut Self, Error> {
+        fn get_dir(p: Option<PathBuf>) -> Result<FullPath, Error> {
+            FullPath::try_from(p.ok_or(Error::LocateDir("user home"))?)
+                .map_err(|e| Error::InvalidDir("user home", e))
+        }
+
+        if self.home_dir.is_none() {
+            self.home_dir = Some(get_dir(dirs::home_dir())?);
+        }
+
+        if self.config_dir.is_none() {
+            self.config_dir = Some(get_dir(dirs::config_dir())?);
+        }
+
+        Ok(self)
+    }
+
+    /// Try to build the [Env], fails if not all required options are set
+    pub fn build(&mut self) -> Result<Env, Error> {
+        let user_dir = self
+            .home_dir
+            .take()
+            .map(BasedPath::new)
+            .ok_or(Error::MissingDir("EnvBuilder::home_dir"))?;
+        let user_config_dir = self
+            .config_dir
+            .take()
+            .map(BasedPath::new)
+            .ok_or(Error::MissingDir("EnvBuilder::config_dir"))?;
+
+        let logix_root = user_config_dir.join("logix")?;
+
+        Ok(Env {
+            user_config: ShadowedDir {
+                local: user_config_dir.clone(),
+                logix: logix_root.join("config")?,
+            },
+            dotfiles: ShadowedDir {
+                local: user_dir,
+                logix: user_config_dir.join("logix/dotfiles")?,
+            },
+
+            logix_root,
+        })
+    }
+
+    pub fn home_dir(&mut self, path: FullPath) -> &mut Self {
+        self.home_dir = Some(path);
+        self
+    }
+
+    pub fn config_dir(&mut self, path: FullPath) -> &mut Self {
+        self.config_dir = Some(path);
+        self
+    }
+}
+
 /// Contains a pre-calculated version of the environment such as various directories.
 pub struct Env {
     /// ~/.config <-> ~/.config/logix/config
@@ -49,30 +114,16 @@ pub struct Env {
 }
 
 impl Env {
-    /// Create a new environment, using the resolved system paths for the current user
-    pub fn init() -> Result<Self, Error> {
-        fn get_dir(p: Option<PathBuf>) -> Result<BasedPath, Error> {
-            FullPath::try_from(p.ok_or(Error::LocateDir("user home"))?)
-                .map(BasedPath::new)
-                .map_err(|e| Error::InvalidDir("user home", e))
+    pub fn builder() -> EnvBuilder {
+        EnvBuilder {
+            home_dir: None,
+            config_dir: None,
         }
+    }
 
-        let user_dir = get_dir(dirs::home_dir())?;
-        let user_config_dir = get_dir(dirs::config_dir())?;
-        let logix_root = user_config_dir.join("logix")?;
-
-        Ok(Self {
-            user_config: ShadowedDir {
-                local: user_config_dir.clone(),
-                logix: logix_root.join("config")?,
-            },
-            dotfiles: ShadowedDir {
-                local: user_dir,
-                logix: user_config_dir.join("logix/dotfiles")?,
-            },
-
-            logix_root,
-        })
+    /// Create an [Env] instance using the OS environment
+    pub fn init() -> Result<Self, Error> {
+        Self::builder().init_from_os_env()?.build()
     }
 
     /// Returns the users config directory, such as `~/.config` and the corresponding
