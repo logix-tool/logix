@@ -50,6 +50,9 @@ pub enum Error {
 
     #[error("File name is not a valid dotfile, it must start with `.` for the path {0:?}")]
     FileNameNotDotfile(PathBuf),
+
+    #[error("Failed to validate the generated {0:?}: {1}")]
+    InvalidGeneratedConfig(&'static str, String),
 }
 
 impl fmt::Debug for Error {

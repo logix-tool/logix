@@ -1,9 +1,10 @@
 use crate::{env::Env, error::Error, status::Status};
 use config::{ConfigDir, Filter, Package};
 use logix_type::LogixLoader;
-use logix_vfs::RelFs;
+use logix_vfs::{MemFs, RelFs};
 use managed_file::ManagedFile;
 use managed_files::ManagedFiles;
+use std::fmt::Write as _;
 
 pub mod based_path;
 pub mod config;
@@ -90,5 +91,48 @@ impl Logix {
     /// Calculate the status of all the files managed by logix
     pub fn calculate_status(&self) -> Result<Status, Error> {
         Status::calculate(self)
+    }
+}
+
+pub struct LogixConfigGenerator<'a> {
+    pub username: &'a str,
+    pub name: &'a str,
+    pub email: &'a str,
+    pub shell: config::Shell,
+    pub editor: &'a str,
+}
+
+impl<'a> LogixConfigGenerator<'a> {
+    pub fn generate(&self) -> Result<String, Error> {
+        let Self {
+            username,
+            name,
+            email,
+            shell,
+            editor,
+        } = *self;
+
+        let mut ret = String::with_capacity(1024);
+        writeln!(ret, "Logix {{").unwrap();
+        writeln!(ret, "  home: UserProfile {{").unwrap();
+        writeln!(ret, "    username: {username:?}").unwrap();
+        writeln!(ret, "    name: {name:?}").unwrap();
+        writeln!(ret, "    email: {email:?}").unwrap();
+        writeln!(ret, "    shell: {shell:?}").unwrap();
+        writeln!(ret, "    editor: {editor:?}").unwrap();
+        writeln!(ret, "    packages: {{").unwrap();
+        writeln!(ret, "      // TODO: Add packages to manage").unwrap();
+        writeln!(ret, "    }}").unwrap();
+        writeln!(ret, "  }}").unwrap();
+        writeln!(ret, "}}").unwrap();
+
+        let mut fs = MemFs::default();
+        fs.set_file("root.logix", ret.as_bytes(), true).unwrap(); // NOTE: Can't fail
+
+        LogixLoader::new(fs)
+            .load_file::<config::Logix>("root.logix")
+            .map_err(|e| Error::InvalidGeneratedConfig("root.logix", format!("{e:?}")))?;
+
+        Ok(ret)
     }
 }

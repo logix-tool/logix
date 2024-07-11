@@ -6,7 +6,7 @@ use logix_type::{
 };
 
 /// Supported shells
-#[derive(Debug, LogixType)]
+#[derive(Debug, LogixType, Clone, Copy)]
 pub enum Shell {
     /// the Bourne Again SHell
     Bash,
