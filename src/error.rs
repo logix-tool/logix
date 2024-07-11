@@ -8,6 +8,7 @@ use logix_type::{
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(thiserror::Error)]
+#[non_exhaustive] // NOTE: New errors does not deserve a new version, and usually it will just be printed anyway
 pub enum Error {
     #[error("Failed to determine the {0} directory")]
     LocateDir(&'static str),
