@@ -9,7 +9,7 @@ use logix_type::types::FullPath;
 use crate::error::Error;
 
 /// Represents a relative path with a base, so it can be both absolute and relative.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BasedPath {
     base: Arc<FullPath>,
     path: Option<FullPath>,

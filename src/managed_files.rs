@@ -40,7 +40,6 @@ impl<'env> ManagedFiles<'env> {
         dir: &ShadowedDir,
         rel_path: impl AsRef<Path>,
     ) -> Result<(), Error> {
-        dbg!((dir, rel_path.as_ref()));
         self.add_file(ManagedFile::Local(dir.make_local_file(rel_path)?));
         Ok(())
     }

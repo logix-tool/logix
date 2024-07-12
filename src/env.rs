@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use logix_type::types::FullPath;
 
@@ -40,23 +40,16 @@ impl ShadowedDir {
 /// Builder used to specify the environment to use when initializing [Env], created by calling [Env::builder]
 pub struct EnvBuilder {
     home_dir: Option<FullPath>,
-    config_dir: Option<FullPath>,
 }
 
 impl EnvBuilder {
     /// Fill in any missing data from the OS environment
     pub fn init_from_os_env(&mut self) -> Result<&mut Self, Error> {
-        fn get_dir(p: Option<PathBuf>) -> Result<FullPath, Error> {
-            FullPath::try_from(p.ok_or(Error::LocateDir("user home"))?)
-                .map_err(|e| Error::InvalidDir("user home", e))
-        }
-
         if self.home_dir.is_none() {
-            self.home_dir = Some(get_dir(dirs::home_dir())?);
-        }
-
-        if self.config_dir.is_none() {
-            self.config_dir = Some(get_dir(dirs::config_dir())?);
+            self.home_dir = Some(
+                FullPath::try_from(home::home_dir().ok_or(Error::LocateDir("user home"))?)
+                    .map_err(|e| Error::InvalidDir("user home", e))?,
+            );
         }
 
         Ok(self)
@@ -69,11 +62,11 @@ impl EnvBuilder {
             .take()
             .map(BasedPath::new)
             .ok_or(Error::MissingDir("EnvBuilder::home_dir"))?;
-        let user_config_dir = self
-            .config_dir
-            .take()
-            .map(BasedPath::new)
-            .ok_or(Error::MissingDir("EnvBuilder::config_dir"))?;
+
+        #[cfg(unix)]
+        let user_config_dir = user_dir.join(".config")?.rebased();
+
+        // TODO: Calculate the config directory on other platforms
 
         let logix_root = user_config_dir.join("logix")?;
 
@@ -95,11 +88,6 @@ impl EnvBuilder {
         self.home_dir = Some(path);
         self
     }
-
-    pub fn config_dir(&mut self, path: FullPath) -> &mut Self {
-        self.config_dir = Some(path);
-        self
-    }
 }
 
 /// Contains a pre-calculated version of the environment such as various directories.
@@ -115,10 +103,7 @@ pub struct Env {
 
 impl Env {
     pub fn builder() -> EnvBuilder {
-        EnvBuilder {
-            home_dir: None,
-            config_dir: None,
-        }
+        EnvBuilder { home_dir: None }
     }
 
     /// Create an [Env] instance using the OS environment

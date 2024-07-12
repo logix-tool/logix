@@ -22,9 +22,6 @@ pub fn walk_dirs(
             })
             .into_iter()
             .flatten()
-            .inspect(|v| {
-                dbg!(v);
-            })
             .filter(|v| {
                 if let Ok(v) = v {
                     // Ignore directories
@@ -45,7 +42,7 @@ pub fn walk_dirs(
     let mut cur_logix = next_logix()?;
 
     loop {
-        match dbg!((cur_local, cur_logix)) {
+        match (cur_local, cur_logix) {
             (Some(local), Some(logix)) => {
                 let local_path = local.path().strip_prefix(base.local_path()).unwrap();
                 if !local_filter.should_include(local_path) {
@@ -54,7 +51,7 @@ pub fn walk_dirs(
                     continue;
                 }
 
-                let logix_path = logix.path().strip_prefix(dbg!(base.logix_path())).unwrap();
+                let logix_path = logix.path().strip_prefix(base.logix_path()).unwrap();
 
                 match local_path.cmp(logix_path) {
                     std::cmp::Ordering::Less => {

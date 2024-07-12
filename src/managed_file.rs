@@ -1,75 +1,102 @@
-use logix_type::types::FullPath;
+use crate::based_path::BasedPath;
 
-use crate::{based_path::BasedPath, error::Error};
-
-pub enum CmpRes {
+/// Represents the status of a given file
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FileStatus {
     UpToDate,
-    Missing,
+    MissingFromBoth,
     LocalAdded,
     LogixAdded,
     Modified,
+    ErrorReadingLocal(std::io::ErrorKind),
+    ErrorReadingLogix(std::io::ErrorKind),
 }
 
-impl CmpRes {
-    fn diff_files(a: Vec<u8>, b: Vec<u8>) -> CmpRes {
-        if a == b {
-            Self::UpToDate
-        } else {
-            Self::Modified
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct LocalFile {
     pub local: BasedPath,
     pub logix: BasedPath,
 }
 
 impl LocalFile {
-    fn compare_files(&self) -> Result<CmpRes, Error> {
+    fn calculate_status(&self) -> FileStatus {
         let Self { local, logix } = self;
         if local.exists() {
             if logix.exists() {
-                let a = std::fs::read(local).map_err(Error::ReadForDiff)?;
-                let b = std::fs::read(logix).map_err(Error::ReadForDiff)?;
-                Ok(CmpRes::diff_files(a, b))
+                let a = match std::fs::read(local) {
+                    Ok(a) => a,
+                    Err(e) => return FileStatus::ErrorReadingLocal(e.kind()),
+                };
+                let b = match std::fs::read(logix) {
+                    Ok(b) => b,
+                    Err(e) => return FileStatus::ErrorReadingLogix(e.kind()),
+                };
+                if a == b {
+                    FileStatus::UpToDate
+                } else {
+                    FileStatus::Modified
+                }
             } else {
-                Ok(CmpRes::LocalAdded)
+                FileStatus::LocalAdded
             }
         } else if logix.exists() {
-            Ok(CmpRes::LogixAdded)
+            FileStatus::LogixAdded
         } else {
-            Ok(CmpRes::Missing)
+            FileStatus::MissingFromBoth
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Clone)]
 pub struct VirtualFile {
-    local: FullPath,
+    local: BasedPath,
     content: String,
 }
 
 impl VirtualFile {
-    fn compare_files(&self) -> Result<CmpRes, Error> {
-        todo!()
+    fn calculate_status(&self) -> FileStatus {
+        let Self { local, content } = self;
+        if local.exists() {
+            let a = match std::fs::read(local) {
+                Ok(a) => a,
+                Err(e) => return FileStatus::ErrorReadingLocal(e.kind()),
+            };
+            if a == content.as_bytes() {
+                FileStatus::UpToDate
+            } else {
+                FileStatus::Modified
+            }
+        } else {
+            FileStatus::LogixAdded
+        }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Clone)]
 pub enum ManagedFile {
     Local(LocalFile),
     Virtual(VirtualFile),
-    Recommend(LocalFile),
 }
 
 impl ManagedFile {
-    pub fn compare_files(&self) -> Result<CmpRes, Error> {
+    pub fn calculate_status(&self) -> FileStatus {
         match self {
-            Self::Local(file) => file.compare_files(),
-            Self::Virtual(file) => file.compare_files(),
-            Self::Recommend(file) => file.compare_files(),
+            Self::Local(file) => file.calculate_status(),
+            Self::Virtual(file) => file.calculate_status(),
+        }
+    }
+
+    pub fn local_path(&self) -> Option<&BasedPath> {
+        match self {
+            Self::Local(file) => Some(&file.local),
+            Self::Virtual(file) => Some(&file.local),
+        }
+    }
+
+    pub fn logix_path(&self) -> Option<&BasedPath> {
+        match self {
+            Self::Local(file) => Some(&file.logix),
+            Self::Virtual(_) => None,
         }
     }
 }

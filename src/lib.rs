@@ -1,8 +1,8 @@
-use crate::{env::Env, error::Error, status::Status};
+use crate::{env::Env, error::Error};
 use config::{ConfigDir, Filter, Package};
 use logix_type::LogixLoader;
 use logix_vfs::{MemFs, RelFs};
-use managed_file::ManagedFile;
+use managed_file::{FileStatus, ManagedFile};
 use managed_files::ManagedFiles;
 use std::fmt::Write as _;
 
@@ -12,7 +12,6 @@ pub mod env;
 pub mod error;
 pub mod managed_file;
 pub mod managed_files;
-pub mod status;
 mod walk_dir;
 
 /// This is the root of a logix session. Most functionality will start
@@ -89,8 +88,13 @@ impl Logix {
     }
 
     /// Calculate the status of all the files managed by logix
-    pub fn calculate_status(&self) -> Result<Status, Error> {
-        Status::calculate(self)
+    pub fn calculate_status(
+        &self,
+    ) -> Result<impl ExactSizeIterator<Item = (FileStatus, ManagedFile)>, Error> {
+        Ok(self
+            .calculate_managed_files()?
+            .into_iter()
+            .map(|file| (file.calculate_status(), file)))
     }
 }
 

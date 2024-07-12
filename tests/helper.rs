@@ -1,4 +1,4 @@
-use std::{fmt, rc::Rc};
+use std::rc::Rc;
 
 use logix::{
     based_path::BasedPath,
@@ -24,8 +24,7 @@ impl TestFs {
     pub fn new(root_logix: &str) -> Self {
         let root = tempfile::TempDir::new().unwrap();
         let home = BasedPath::new(FullPath::try_from(root.path().join("home/zeldor")).unwrap());
-        let local_config =
-            BasedPath::new(FullPath::try_from(root.path().join("home/zeldor/.config")).unwrap());
+        let local_config = home.join(".config").unwrap().rebased();
         let logix_root = local_config.join("logix").unwrap();
         let logix_config = logix_root.join("config").unwrap();
         let logix_dotfiles = logix_root.join("dotfiles").unwrap();
@@ -66,7 +65,6 @@ impl TestFs {
             inner: self.inner.clone(),
             value: Env::builder()
                 .home_dir(self.inner.home.as_full_path().clone())
-                .config_dir(self.inner.local_config.as_full_path().clone())
                 .build()
                 .unwrap(),
         }
@@ -102,24 +100,4 @@ impl<T> std::ops::Deref for Loaded<T> {
     fn deref(&self) -> &T {
         &self.value
     }
-}
-
-pub fn compare_iters<T: PartialEq + fmt::Debug>(
-    name: &str,
-    mut want_it: impl Iterator<Item = T>,
-    mut got_it: impl Iterator<Item = T>,
-) -> bool {
-    for i in 0.. {
-        let want = want_it.next();
-        let got = got_it.next();
-        if want != got {
-            eprintln!("*** ERROR: {name:?} at index {i} differs");
-            eprintln!("Want: {want:#?}");
-            eprintln!("Got:  {got:#?}");
-            return false;
-        } else if want.is_none() {
-            return true;
-        }
-    }
-    false
 }

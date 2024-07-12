@@ -1,4 +1,9 @@
-use logix::{managed_file::ManagedFile, status::Status};
+use std::collections::HashMap;
+
+use logix::{
+    managed_file::{FileStatus, ManagedFile},
+    Logix,
+};
 
 mod helper;
 
@@ -38,45 +43,51 @@ struct WantStatus {
 }
 
 impl WantStatus {
-    fn assert_eq(&self, status: &Status) -> bool {
-        if !helper::compare_iters(
-            "Modified entries",
-            self.modified.iter(),
-            status.modified().iter(),
-        ) {
-            return false;
+    fn assert_eq(&self, logix: &Logix) -> bool {
+        let mut files = HashMap::new();
+
+        {
+            let Self {
+                modified,
+                missing,
+                local_added,
+                logix_added,
+                up_to_date,
+            } = self;
+
+            for file in modified {
+                assert_eq!(files.insert(file, FileStatus::Modified), None);
+            }
+
+            for file in missing {
+                assert_eq!(files.insert(file, FileStatus::MissingFromBoth), None);
+            }
+
+            for file in local_added {
+                assert_eq!(files.insert(file, FileStatus::LocalAdded), None);
+            }
+
+            for file in logix_added {
+                assert_eq!(files.insert(file, FileStatus::LogixAdded), None);
+            }
+
+            for file in up_to_date {
+                assert_eq!(files.insert(file, FileStatus::UpToDate), None);
+            }
         }
 
-        if !helper::compare_iters(
-            "Missing entries",
-            self.missing.iter(),
-            status.missing().iter(),
-        ) {
-            return false;
+        for (status, file) in logix.calculate_status().unwrap() {
+            if let Some(want_status) = files.remove(&file) {
+                if want_status != status {
+                    panic!("Got unexpected status {status:?} for file {file:?} expected {want_status:?}");
+                }
+            } else {
+                panic!("Got unexpected file {file:?} with status {status:?}");
+            }
         }
 
-        if !helper::compare_iters(
-            "Local added entries",
-            self.local_added.iter(),
-            status.local_added().iter(),
-        ) {
-            return false;
-        }
-
-        if !helper::compare_iters(
-            "Logix added entries",
-            self.logix_added.iter(),
-            status.logix_added().iter(),
-        ) {
-            return false;
-        }
-
-        if !helper::compare_iters(
-            "Up to date entries",
-            self.up_to_date.iter(),
-            status.up_to_date().iter(),
-        ) {
-            return false;
+        if let Some((file, status)) = files.iter().next() {
+            panic!("Missing file {file:?} with status {status:?}");
         }
 
         true
@@ -95,31 +106,31 @@ fn no_files() {
         up_to_date: vec![],
     };
 
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 
     // Add a dummy config file and make sure we notice it
     fs.write_config_file("helix/config.toml", "# Dummy config");
     want.local_added
         .push(fs.managed_logix_config("helix/config.toml"));
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 
     // Add themes/custom.toml to the logix config and make sure we notice it
     fs.write_config_file("logix/config/helix/themes/custom.toml", "# Dummy theme");
     want.logix_added
         .push(fs.managed_logix_config("helix/themes/custom.toml"));
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 
     // Add a modified version of themes/custom.toml to .config and make sure we notice it
     fs.write_config_file("helix/themes/custom.toml", "# Dummy theme 2");
     want.modified.extend(want.logix_added.pop());
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 
     // Make themes/custom.toml identical
     fs.write_config_file("helix/themes/custom.toml", "# Dummy theme");
     want.up_to_date.extend(want.modified.pop());
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 
     // Files in the runtime directory should be ignored
     fs.write_config_file("helix/runtime/whatever.txt", "# Dummy file");
-    assert!(want.assert_eq(&logix.calculate_status().unwrap()));
+    assert!(want.assert_eq(&logix));
 }

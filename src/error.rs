@@ -28,9 +28,6 @@ pub enum Error {
     #[error("An unexpected error occured when stripping a prefix of a path previously joined with said prefix")]
     StripPrefixFailed,
 
-    #[error("Failed to read file for diff: {0}")]
-    ReadForDiff(std::io::Error),
-
     #[error("Failed to join local directory: {0}")]
     JoinLocal(PathError),
 
