@@ -51,6 +51,12 @@ pub enum Error {
 
     #[error("Failed to validate the generated {0:?}: {1}")]
     InvalidGeneratedConfig(&'static str, String),
+
+    #[error("HTTP call to {0:?} failed: {1}")]
+    HttpRequest(String, String),
+
+    #[error("Failed to parse json response for HTTP call to {0:?}: {1}")]
+    HttpRequestJson(String, String),
 }
 
 impl fmt::Debug for Error {

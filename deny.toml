@@ -7,10 +7,22 @@ yanked = "deny"
 # See https://spdx.org/licenses/ for list of possible licenses
 allow = [
     "MIT",
+    "ISC", # Similar to MIT
+    "MPL-2.0", # Should be ok as long as it is just crate dependencies, as they are not altered
     "Apache-2.0",
     "Unicode-DFS-2016",
+    "BSD-3-Clause",
+    "LicenseRef-ring", # Hack to allow ring, used by ureq for TLS
 ]
 confidence-threshold = 1.0
+
+# Unfortunately ring does not provide a well known license, but it should be ISC'ish
+[[licenses.clarify]]
+name = "ring"
+expression = "LicenseRef-ring"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 },
+]
 
 [sources]
 unknown-registry = "deny"

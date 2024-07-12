@@ -1,17 +1,20 @@
-use crate::{env::Env, error::Error};
+use crate::{env::Env, error::Error, managed_file::Owner};
 use config::{ConfigDir, Filter, Package};
 use logix_type::LogixLoader;
 use logix_vfs::{MemFs, RelFs};
 use managed_file::{FileStatus, ManagedFile};
 use managed_files::ManagedFiles;
+use managed_package::ManagedPackage;
 use std::fmt::Write as _;
 
 pub mod based_path;
 pub mod config;
 pub mod env;
 pub mod error;
+mod github;
 pub mod managed_file;
 pub mod managed_files;
+pub mod managed_package;
 mod walk_dir;
 
 /// This is the root of a logix session. Most functionality will start
@@ -51,7 +54,7 @@ impl Logix {
                 packages,
             } = home;
             match shell {
-                Some(config::Shell::Bash) => ret.add_dotfile(".bashrc")?,
+                Some(config::Shell::Bash) => ret.add_dotfile(&Owner::Shell, ".bashrc")?,
                 None => {}
             }
             match ssh {
@@ -59,25 +62,32 @@ impl Logix {
                     agent: config::SshAgent::SystemD,
                     keys,
                 }) => {
-                    ret.add_config_file("systemd/user/ssh-agent.service")?;
+                    ret.add_config_file(&Owner::Ssh, "systemd/user/ssh-agent.service")?;
                     debug_assert!(keys.is_empty(), "TODO: {keys:?}");
                 }
                 None => {}
             }
             for (pname, p) in packages {
+                let owner = Owner::Package(pname.clone());
                 match p {
-                    Package::Custom {
+                    Package::RustCrate {
+                        crate_name: _,
+                        config_dir,
+                    }
+                    | Package::Custom {
                         source: _,
+                        local_dir: _,
                         config_dir,
                     } => match config_dir {
                         ConfigDir::User {
                             package_name,
                             filter,
                         } => ret.add_dir(
+                            &owner,
                             &self
                                 .env
                                 .user_config()
-                                .make_shadowed_subdir(package_name.as_ref().unwrap_or(pname))?,
+                                .make_shadowed_subdir(package_name.as_deref().unwrap_or(pname))?,
                             filter.as_ref().unwrap_or(Filter::EMPTY),
                         )?,
                     },
@@ -87,14 +97,22 @@ impl Logix {
         Ok(ret.finalize())
     }
 
-    /// Calculate the status of all the files managed by logix
-    pub fn calculate_status(
+    /// Calculate the status of all the config files managed by logix
+    pub fn calculate_config_status(
         &self,
     ) -> Result<impl ExactSizeIterator<Item = (FileStatus, ManagedFile)>, Error> {
         Ok(self
             .calculate_managed_files()?
             .into_iter()
             .map(|file| (file.calculate_status(), file)))
+    }
+
+    pub fn iter_packages(&self) -> impl ExactSizeIterator<Item = ManagedPackage> {
+        self.config
+            .home
+            .packages
+            .iter()
+            .map(|(name, info)| ManagedPackage::new(name, info))
     }
 }
 

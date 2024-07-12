@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use logix::{
-    managed_file::{FileStatus, ManagedFile},
+    managed_file::{FileStatus, ManagedFile, Owner},
     Logix,
 };
 
@@ -76,7 +76,7 @@ impl WantStatus {
             }
         }
 
-        for (status, file) in logix.calculate_status().unwrap() {
+        for (status, file) in logix.calculate_config_status().unwrap() {
             if let Some(want_status) = files.remove(&file) {
                 if want_status != status {
                     panic!("Got unexpected status {status:?} for file {file:?} expected {want_status:?}");
@@ -100,7 +100,7 @@ fn no_files() {
     let logix = fs.load_logix();
     let mut want = WantStatus {
         modified: vec![],
-        missing: vec![fs.managed_logix_dotfile(".bashrc")],
+        missing: vec![fs.managed_logix_dotfile(Owner::Shell, ".bashrc")],
         local_added: vec![],
         logix_added: vec![],
         up_to_date: vec![],
@@ -111,13 +111,13 @@ fn no_files() {
     // Add a dummy config file and make sure we notice it
     fs.write_config_file("helix/config.toml", "# Dummy config");
     want.local_added
-        .push(fs.managed_logix_config("helix/config.toml"));
+        .push(fs.managed_logix_config("helix", "helix/config.toml"));
     assert!(want.assert_eq(&logix));
 
     // Add themes/custom.toml to the logix config and make sure we notice it
     fs.write_config_file("logix/config/helix/themes/custom.toml", "# Dummy theme");
     want.logix_added
-        .push(fs.managed_logix_config("helix/themes/custom.toml"));
+        .push(fs.managed_logix_config("helix", "helix/themes/custom.toml"));
     assert!(want.assert_eq(&logix));
 
     // Add a modified version of themes/custom.toml to .config and make sure we notice it

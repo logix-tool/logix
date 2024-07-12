@@ -1,7 +1,7 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use logix_type::{
-    types::{ExecutablePath, Map, ShortStr},
+    types::{ExecutablePath, Map, ShortStr, ValidPath},
     LogixType,
 };
 
@@ -30,7 +30,7 @@ pub enum Command {
 }
 
 /// A relative path filter
-#[derive(Debug, LogixType)]
+#[derive(Debug, LogixType, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Filter {
     /// Ignore all paths that starts with exactly this. It will match entire
     /// components, so `"hello"` will not match `"hello.txt"`, but it will
@@ -50,7 +50,7 @@ impl Filter {
 }
 
 /// Points to the config of a [Package]
-#[derive(Debug, LogixType)]
+#[derive(Debug, LogixType, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConfigDir {
     /// The config is under the standard user directory, such as
     /// `~/.config/<package_name>` and all files that fit the `filter`
@@ -62,14 +62,23 @@ pub enum ConfigDir {
 }
 
 /// A package of various types that is managed by logix
-#[derive(Debug, LogixType)]
+#[derive(Debug, LogixType, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Package {
+    /// The package is a rust crate installed using cargo
+    RustCrate {
+        /// Name of the crate as recognized by cargo and crates.io, defaults to the package name
+        crate_name: Option<ShortStr>,
+        /// Specified the config files that needs to be managed by this package
+        config_dir: ConfigDir,
+    },
     /// A custom package which will be downloaded and built from source. It
     /// will also be kept up to date by logix.
     Custom {
         /// The source of the package such as the repository it can be built from
         source: Source,
-        // TODO: local_dir: ValidPath,
+        /// Where to store the downloaded sources, defaults to a predictable directory
+        /// under `./cache/logix` or similar (depending on platform)
+        local_dir: Option<ValidPath>,
         // TODO: install: Command,
         /// Specified the config files that needs to be managed by this package
         config_dir: ConfigDir,
@@ -77,7 +86,7 @@ pub enum Package {
 }
 
 /// Points to the source of a [Package] and may be used to look for new versions
-#[derive(Debug, LogixType)]
+#[derive(Debug, LogixType, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Source {
     GitHub { owner: ShortStr, repo: ShortStr },
 }
@@ -93,7 +102,7 @@ pub struct UserProfile {
     pub editor: Option<ExecutablePath>,
     pub ssh: Option<Ssh>,
     /// Packages installed to the users home directory, such as to `local/.bin`
-    pub packages: Map<Package>,
+    pub packages: Map<Package, Arc<str>>,
 }
 
 /// The root of the logix config

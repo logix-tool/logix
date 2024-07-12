@@ -64,11 +64,11 @@ impl EnvBuilder {
             .ok_or(Error::MissingDir("EnvBuilder::home_dir"))?;
 
         #[cfg(unix)]
-        let user_config_dir = user_dir.join(".config")?.rebased();
+        let user_config_dir = user_dir.join(".config")?;
 
         // TODO: Calculate the config directory on other platforms
 
-        let logix_root = user_config_dir.join("logix")?;
+        let logix_root = user_config_dir.join("logix")?.rebased();
 
         Ok(Env {
             user_config: ShadowedDir {
@@ -77,7 +77,7 @@ impl EnvBuilder {
             },
             dotfiles: ShadowedDir {
                 local: user_dir,
-                logix: user_config_dir.join("logix/dotfiles")?,
+                logix: logix_root.join("dotfiles")?,
             },
 
             logix_root,

@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use logix::{
     based_path::BasedPath,
     env::Env,
-    managed_file::{LocalFile, ManagedFile},
+    managed_file::{LocalFile, ManagedFile, Owner},
     Logix,
 };
 use logix_type::types::FullPath;
@@ -24,8 +24,8 @@ impl TestFs {
     pub fn new(root_logix: &str) -> Self {
         let root = tempfile::TempDir::new().unwrap();
         let home = BasedPath::new(FullPath::try_from(root.path().join("home/zeldor")).unwrap());
-        let local_config = home.join(".config").unwrap().rebased();
-        let logix_root = local_config.join("logix").unwrap();
+        let local_config = home.join(".config").unwrap();
+        let logix_root = local_config.join("logix").unwrap().rebased();
         let logix_config = logix_root.join("config").unwrap();
         let logix_dotfiles = logix_root.join("dotfiles").unwrap();
 
@@ -70,22 +70,28 @@ impl TestFs {
         }
     }
 
-    pub fn managed_logix_config(&self, name: &str) -> ManagedFile {
-        ManagedFile::Local(LocalFile {
-            local: self.inner.local_config.join(name).unwrap(),
-            logix: self.inner.logix_config.join(name).unwrap(),
-        })
+    pub fn managed_logix_config(&self, owner: &str, name: &str) -> ManagedFile {
+        ManagedFile::Local(
+            Owner::Package(Arc::from(owner)),
+            LocalFile {
+                local: self.inner.local_config.join(name).unwrap(),
+                logix: self.inner.logix_config.join(name).unwrap(),
+            },
+        )
     }
 
-    pub fn managed_logix_dotfile(&self, name: &str) -> ManagedFile {
-        ManagedFile::Local(LocalFile {
-            local: self.inner.home.join(name).unwrap(),
-            logix: self
-                .inner
-                .logix_dotfiles
-                .join(name.strip_prefix('.').unwrap())
-                .unwrap(),
-        })
+    pub fn managed_logix_dotfile(&self, owner: Owner, name: &str) -> ManagedFile {
+        ManagedFile::Local(
+            owner,
+            LocalFile {
+                local: self.inner.home.join(name).unwrap(),
+                logix: self
+                    .inner
+                    .logix_dotfiles
+                    .join(name.strip_prefix('.').unwrap())
+                    .unwrap(),
+            },
+        )
     }
 }
 

@@ -1,4 +1,13 @@
+use std::sync::Arc;
+
 use crate::based_path::BasedPath;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Owner {
+    Ssh,
+    Shell,
+    Package(Arc<str>),
+}
 
 /// Represents the status of a given file
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -74,29 +83,35 @@ impl VirtualFile {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Clone)]
 pub enum ManagedFile {
-    Local(LocalFile),
-    Virtual(VirtualFile),
+    Local(Owner, LocalFile),
+    Virtual(Owner, VirtualFile),
 }
 
 impl ManagedFile {
     pub fn calculate_status(&self) -> FileStatus {
         match self {
-            Self::Local(file) => file.calculate_status(),
-            Self::Virtual(file) => file.calculate_status(),
+            Self::Local(_, file) => file.calculate_status(),
+            Self::Virtual(_, file) => file.calculate_status(),
         }
     }
 
     pub fn local_path(&self) -> Option<&BasedPath> {
         match self {
-            Self::Local(file) => Some(&file.local),
-            Self::Virtual(file) => Some(&file.local),
+            Self::Local(_, file) => Some(&file.local),
+            Self::Virtual(_, file) => Some(&file.local),
         }
     }
 
     pub fn logix_path(&self) -> Option<&BasedPath> {
         match self {
-            Self::Local(file) => Some(&file.logix),
-            Self::Virtual(_) => None,
+            Self::Local(_, file) => Some(&file.logix),
+            Self::Virtual(_, _) => None,
+        }
+    }
+
+    pub fn owner(&self) -> &Owner {
+        match self {
+            Self::Local(owner, _) | Self::Virtual(owner, _) => owner,
         }
     }
 }
