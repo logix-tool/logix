@@ -62,14 +62,16 @@ pub enum ConfigDir {
 }
 
 /// A package of various types that is managed by logix
-#[derive(Debug, LogixType, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, LogixType, PartialEq, Eq)]
 pub enum Package {
     /// The package is a rust crate installed using cargo
     RustCrate {
         /// Name of the crate as recognized by cargo and crates.io, defaults to the package name
         crate_name: Option<ShortStr>,
         /// Specified the config files that needs to be managed by this package
-        config_dir: ConfigDir,
+        config_dir: Option<ConfigDir>,
+        /// Environment variables that will be set
+        environment: Map<String>,
     },
     /// A custom package which will be downloaded and built from source. It
     /// will also be kept up to date by logix.
@@ -81,7 +83,7 @@ pub enum Package {
         local_dir: Option<ValidPath>,
         // TODO: install: Command,
         /// Specified the config files that needs to be managed by this package
-        config_dir: ConfigDir,
+        config_dir: Option<ConfigDir>,
     },
 }
 

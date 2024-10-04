@@ -4,7 +4,8 @@ use logix::{
     config::Shell,
     error::Error,
     managed_file::{FileStatus, LocalFile, ManagedFile},
-    managed_package::{ManagedPackage, PackageStatus},
+    managed_package::{ManagedPackage, PackageStatus, PackageVersion},
+    system_state::SystemState,
 };
 
 mod main_utils;
@@ -42,6 +43,7 @@ enum Command {
         package: Option<String>,
     },
     UpdateConfig {},
+    InstallUpdates {},
     NewConfig {
         #[clap(short = 'u', long)]
         username: String,
@@ -96,9 +98,11 @@ impl Context {
         &'a self,
         it: impl Iterator<Item = ManagedPackage<'a>>,
     ) -> Result<(), Error> {
+        let state = SystemState::init()?;
+
         writeln!(
             self,
-            "{:<10}  {:<16}  {:<16}  {:<16}",
+            "{:<20}  {:<16}  {:<16}  {:<16}",
             "Name".color(self.theme.status_header),
             "Installed".color(self.theme.status_header),
             "Downloaded".color(self.theme.status_header),
@@ -110,10 +114,10 @@ impl Context {
                 installed_version,
                 downloaded_version,
                 latest_version,
-            } = package.calculate_status()?;
+            } = package.calculate_status(&state)?;
             writeln!(
                 self,
-                " {:<10}  {:<16}  {:<16}  {:<16}",
+                " {:<20}  {:<16}  {:<16}  {:<16}",
                 package.name().color(self.theme.owner_package),
                 colored::package_version(&installed_version, &self.theme),
                 colored::package_version(&downloaded_version, &self.theme),
@@ -163,6 +167,40 @@ impl Context {
         }
         Ok(())
     }
+
+    pub fn install_updates(&self) -> Result<(), Error> {
+        let mut state = SystemState::init()?;
+        for package in self.logix.iter_packages() {
+            if package.is_custom() {
+                // TODO: Add support for custom packages
+                continue;
+            }
+
+            let status = package.calculate_status(&state)?;
+            if status.need_update() {
+                if matches!(status.installed_version, PackageVersion::None) {
+                    writeln!(
+                        self,
+                        "Installing version {} of package {}",
+                        colored::package_version(&status.latest_version, &self.theme),
+                        package.name().color(self.theme.owner_package),
+                    );
+                } else {
+                    writeln!(
+                        self,
+                        "Updating package {} from {} to {}",
+                        package.name().color(self.theme.owner_package),
+                        colored::package_version(&status.installed_version, &self.theme),
+                        colored::package_version(&status.latest_version, &self.theme),
+                    );
+                }
+
+                package.install_update()?;
+                state.refresh_state()?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn main() -> logix::error::Result<()> {
@@ -194,6 +232,10 @@ fn main() -> logix::error::Result<()> {
         Command::UpdateConfig {} => {
             let ctx = Context::load(theme, shared)?;
             ctx.update_config()?;
+        }
+        Command::InstallUpdates {} => {
+            let ctx = Context::load(theme, shared)?;
+            ctx.install_updates()?;
         }
         Command::NewConfig {
             ref username,

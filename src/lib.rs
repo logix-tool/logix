@@ -12,9 +12,11 @@ pub mod config;
 pub mod env;
 pub mod error;
 mod github;
+mod helpers;
 pub mod managed_file;
 pub mod managed_files;
 pub mod managed_package;
+pub mod system_state;
 mod walk_dir;
 
 /// This is the root of a logix session. Most functionality will start
@@ -78,16 +80,17 @@ impl Logix {
                     Package::RustCrate {
                         crate_name: _,
                         config_dir,
+                        environment: _,
                     }
                     | Package::Custom {
                         source: _,
                         local_dir: _,
                         config_dir,
                     } => match config_dir {
-                        ConfigDir::User {
+                        Some(ConfigDir::User {
                             package_name,
                             filter,
-                        } => ret.add_dir(
+                        }) => ret.add_dir(
                             &owner,
                             &self
                                 .env
@@ -95,6 +98,7 @@ impl Logix {
                                 .make_shadowed_subdir(package_name.as_deref().unwrap_or(pname))?,
                             filter.as_ref().unwrap_or(Filter::EMPTY),
                         )?,
+                        None => {}
                     },
                 }
             }

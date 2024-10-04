@@ -62,6 +62,9 @@ pub enum Error {
 
     #[error("Failed to read file to diff {0:?}: {1}")]
     ReadForDiff(BasedPath, String),
+
+    #[error("Failed to run command {0:?}: {1}")]
+    ShellCommandFailed(&'static str, String),
 }
 
 impl fmt::Debug for Error {

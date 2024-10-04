@@ -25,6 +25,7 @@ pub struct Theme {
     pub owner_package: Color,
     pub package_version_none: Color,
     pub package_version_date: Color,
+    pub package_version_str: Color,
     pub diff: DiffTheme,
 }
 
@@ -67,6 +68,7 @@ impl Theme {
             owner_package: bright_green,
             package_version_none: dimmed_blue,
             package_version_date: white_blue,
+            package_version_str: bright_blue,
             diff: DiffTheme {
                 removed: red,
                 added: green,

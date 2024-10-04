@@ -148,6 +148,9 @@ pub fn package_version<'a>(
                         .unwrap();
                     fmt::Display::fmt(&tmp.color(self.theme.package_version_date), f)
                 }
+                PackageVersion::Semver(ver) => {
+                    fmt::Display::fmt(&ver.color(self.theme.package_version_str), f)
+                }
             }
         }
     }

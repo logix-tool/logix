@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use time::OffsetDateTime;
 
-use crate::{config::Package, error::Error, github::GitHubRepo};
+use crate::{
+    config::Package, error::Error, github::GitHubRepo, helpers, system_state::SystemState,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PackageVersion {
@@ -12,6 +14,7 @@ pub enum PackageVersion {
         id: String,
         date: OffsetDateTime,
     },
+    Semver(semver::Version),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -24,7 +27,20 @@ pub struct PackageStatus {
     pub latest_version: PackageVersion,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+impl PackageStatus {
+    pub fn need_update(&self) -> bool {
+        if self.latest_version != self.installed_version {
+            match self.latest_version {
+                PackageVersion::None => false,
+                PackageVersion::Commit { .. } | PackageVersion::Semver(_) => true,
+            }
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManagedPackage<'a> {
     name: Arc<str>,
     package: &'a Package,
@@ -42,12 +58,21 @@ impl<'a> ManagedPackage<'a> {
         &self.name
     }
 
-    pub fn calculate_status(&self) -> Result<PackageStatus, Error> {
+    pub fn calculate_status(&self, state: &SystemState) -> Result<PackageStatus, Error> {
         match self.package {
             Package::RustCrate {
                 crate_name,
-                config_dir,
-            } => todo!("{crate_name:?}, {config_dir:?}"),
+                config_dir: _,
+                environment: _,
+            } => {
+                let crate_name = crate_name.as_deref().unwrap_or(&self.name);
+
+                Ok(PackageStatus {
+                    installed_version: state.cargo.package_version(crate_name),
+                    downloaded_version: PackageVersion::None,
+                    latest_version: helpers::cargo::latest_package_version(crate_name)?,
+                })
+            }
             Package::Custom {
                 source,
                 local_dir: _,  // TODO: Use this for downloaded_version
@@ -68,5 +93,23 @@ impl<'a> ManagedPackage<'a> {
                 },
             }),
         }
+    }
+
+    pub fn install_update(&self) -> Result<PackageVersion, Error> {
+        match self.package {
+            Package::RustCrate {
+                crate_name,
+                config_dir: _,
+                environment: _,
+            } => {
+                let crate_name = crate_name.as_deref().unwrap_or(&self.name);
+                helpers::cargo::install_package(crate_name)
+            }
+            Package::Custom { .. } => todo!(),
+        }
+    }
+
+    pub fn is_custom(&self) -> bool {
+        matches!(self.package, Package::Custom { .. })
     }
 }
