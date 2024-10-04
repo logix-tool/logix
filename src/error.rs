@@ -5,6 +5,8 @@ use logix_type::{
     types::FullPath,
 };
 
+use crate::based_path::BasedPath;
+
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(thiserror::Error)]
@@ -57,6 +59,9 @@ pub enum Error {
 
     #[error("Failed to parse json response for HTTP call to {0:?}: {1}")]
     HttpRequestJson(String, String),
+
+    #[error("Failed to read file to diff {0:?}: {1}")]
+    ReadForDiff(BasedPath, String),
 }
 
 impl fmt::Debug for Error {

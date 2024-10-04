@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use logix::{
-    managed_file::{FileStatus, ManagedFile, Owner},
+    managed_file::{FileStatus, ManagedFile},
     Logix,
 };
 
@@ -87,7 +87,7 @@ impl WantStatus {
         }
 
         if let Some((file, status)) = files.iter().next() {
-            panic!("Missing file {file:?} with status {status:?}");
+            panic!("Missing file {file:#?} with status {status:?}");
         }
 
         true
@@ -100,7 +100,7 @@ fn no_files() {
     let logix = fs.load_logix();
     let mut want = WantStatus {
         modified: vec![],
-        missing: vec![fs.managed_logix_dotfile(Owner::Shell, ".bashrc")],
+        missing: vec![],
         local_added: vec![],
         logix_added: vec![],
         up_to_date: vec![],

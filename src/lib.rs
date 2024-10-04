@@ -39,6 +39,11 @@ impl Logix {
         &self.config
     }
 
+    /// Retrieve the raw environment
+    pub fn env(&self) -> &Env {
+        &self.env
+    }
+
     /// Returns a list of files managed by logix
     pub fn calculate_managed_files(&self) -> Result<Vec<ManagedFile>, Error> {
         let config::Logix { home } = &self.config;
@@ -54,7 +59,7 @@ impl Logix {
                 packages,
             } = home;
             match shell {
-                Some(config::Shell::Bash) => ret.add_dotfile(&Owner::Shell, ".bashrc")?,
+                Some(config::Shell::Bash) => {}
                 None => {}
             }
             match ssh {
@@ -112,6 +117,14 @@ impl Logix {
             .home
             .packages
             .iter()
+            .map(|(name, info)| ManagedPackage::new(name, info))
+    }
+
+    pub fn find_package(&self, name: &str) -> Option<ManagedPackage> {
+        self.config
+            .home
+            .packages
+            .get_key_value(name)
             .map(|(name, info)| ManagedPackage::new(name, info))
     }
 }

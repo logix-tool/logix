@@ -1,19 +1,30 @@
 #![deny(warnings, clippy::all)]
 
 use logix::{
-    config::Shell, env::Env, error::Error, managed_file::FileStatus,
-    managed_package::PackageStatus, Logix,
+    config::Shell,
+    error::Error,
+    managed_file::{FileStatus, LocalFile, ManagedFile},
+    managed_package::{ManagedPackage, PackageStatus},
 };
 
 mod main_utils;
 
-use main_utils::{colored, theme::Theme};
+use main_utils::{colored, context::Context, diff::diff_text_files, theme::Theme};
 use owo_colors::OwoColorize;
+
+#[derive(clap::Args)]
+struct SharedArgs {
+    #[clap(long, short = 'v', global(true))]
+    verbose: bool,
+}
 
 #[derive(clap::Parser)]
 #[command(author, version, about, long_about)]
 #[command(propagate_version = true)]
 struct Args {
+    #[clap(flatten)]
+    shared: SharedArgs,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -21,25 +32,16 @@ struct Args {
 #[derive(clap::Subcommand)]
 enum Command {
     /// Get the status of your system
-    Status {
-        #[clap(long, short = 'v')]
-        verbose: bool,
-    },
+    Status {},
     /// Get the status of your config files
-    ConfigStatus {
-        #[clap(long, short = 'v')]
-        verbose: bool,
-    },
+    ConfigStatus {},
     /// Get the status of your packages
     PackageStatus {
         /// Get more detailed status about the specified package
         #[clap(long, short = 'p')]
         package: Option<String>,
-        #[clap(long, short = 'v')]
-        verbose: bool,
     },
-    /// Create a plan based on the current config
-    Plan {},
+    UpdateConfig {},
     NewConfig {
         #[clap(short = 'u', long)]
         username: String,
@@ -64,94 +66,134 @@ enum PrintCmd {
     Config {},
 }
 
-fn config_status(logix: &Logix, theme: &Theme, verbose: bool) -> Result<(), Error> {
-    println!(
-        "{:<15}  {:<10}  {}",
-        "Status".color(theme.status_header),
-        "Owner".color(theme.status_header),
-        "Local file".color(theme.status_header),
-    );
-    for (status, file) in logix.calculate_config_status()? {
-        if !verbose {
-            if let FileStatus::UpToDate = status {
-                continue;
+impl Context {
+    fn config_status(&self) -> Result<(), Error> {
+        writeln!(
+            self,
+            "{:<15}  {:<10}  {}",
+            "Status".color(self.theme.status_header),
+            "Owner".color(self.theme.status_header),
+            "Local file".color(self.theme.status_header),
+        );
+        for (status, file) in self.logix.calculate_config_status()? {
+            if !self.args.verbose {
+                if let FileStatus::UpToDate = status {
+                    continue;
+                }
+            }
+
+            let status = colored::status(status, &self.theme);
+            let owner = colored::owner(file.owner(), &self.theme);
+            let local = colored::path(file.local_path(), &self.theme.local_file);
+
+            writeln!(self, " {status:<15}  {owner:<10}  {local}");
+        }
+        writeln!(self);
+        Ok(())
+    }
+
+    fn print_packages_status<'a>(
+        &'a self,
+        it: impl Iterator<Item = ManagedPackage<'a>>,
+    ) -> Result<(), Error> {
+        writeln!(
+            self,
+            "{:<10}  {:<16}  {:<16}  {:<16}",
+            "Name".color(self.theme.status_header),
+            "Installed".color(self.theme.status_header),
+            "Downloaded".color(self.theme.status_header),
+            "Remote".color(self.theme.status_header),
+        );
+
+        for package in it {
+            let PackageStatus {
+                installed_version,
+                downloaded_version,
+                latest_version,
+            } = package.calculate_status()?;
+            writeln!(
+                self,
+                " {:<10}  {:<16}  {:<16}  {:<16}",
+                package.name().color(self.theme.owner_package),
+                colored::package_version(&installed_version, &self.theme),
+                colored::package_version(&downloaded_version, &self.theme),
+                colored::package_version(&latest_version, &self.theme),
+            );
+        }
+        writeln!(self);
+        Ok(())
+    }
+
+    fn packages_status(&self) -> Result<(), Error> {
+        self.print_packages_status(self.logix.iter_packages())
+    }
+
+    fn package_status(&self, name: &str) -> Result<(), Error> {
+        self.print_packages_status(self.logix.find_package(name).into_iter())
+    }
+
+    fn update_config(&self) -> Result<(), Error> {
+        for (status, file) in self.logix.calculate_config_status()? {
+            match status {
+                FileStatus::UpToDate => {}
+                FileStatus::MissingFromBoth => todo!(),
+                FileStatus::LocalAdded => todo!(),
+                FileStatus::LogixAdded => todo!(),
+                FileStatus::Modified => match file {
+                    ManagedFile::Local(_, LocalFile { local, logix }) => {
+                        writeln!(self, "Config file has changes",);
+                        writeln!(
+                            self,
+                            "Current config: {}",
+                            colored::path(Some(&local), &self.theme.local_file)
+                        );
+                        writeln!(
+                            self,
+                            "Logix config:   {}/{}",
+                            ".config/logix".color(self.theme.logix_root), // TODO: Need to be dynamic
+                            colored::path(Some(&logix), &self.theme.logix_file)
+                        );
+                        diff_text_files(self, &local, &logix)?;
+                    }
+                    ManagedFile::Virtual(_, _) => todo!(),
+                },
+                FileStatus::ErrorReadingLocal(_) => todo!(),
+                FileStatus::ErrorReadingLogix(_) => todo!(),
             }
         }
-
-        let status = colored::status(status, theme);
-        let owner = colored::owner(file.owner(), theme);
-        let local = colored::path(file.local_path(), &theme.local_file);
-
-        println!(" {status:<15}  {owner:<10}  {local}");
+        Ok(())
     }
-    println!();
-    Ok(())
-}
-
-fn packages_status(logix: &Logix, theme: &Theme, _verbose: bool) -> Result<(), Error> {
-    println!(
-        "{:<10}  {:<16}  {:<16}  {:<16}",
-        "Name".color(theme.status_header),
-        "Installed".color(theme.status_header),
-        "Downloaded".color(theme.status_header),
-        "Remote".color(theme.status_header),
-    );
-
-    for package in logix.iter_packages() {
-        let PackageStatus {
-            installed_version,
-            downloaded_version,
-            latest_version,
-        } = package.calculate_status()?;
-        println!(
-            " {:<10}  {:<16}  {:<16}  {:<16}",
-            package.name().color(theme.owner_package),
-            colored::package_version(&installed_version, theme),
-            colored::package_version(&downloaded_version, theme),
-            colored::package_version(&latest_version, theme),
-        );
-    }
-    println!();
-    Ok(())
-}
-
-fn package_status(
-    _logix: &Logix,
-    _theme: &Theme,
-    _verbose: bool,
-    _name: &str,
-) -> Result<(), Error> {
-    todo!()
 }
 
 fn main() -> logix::error::Result<()> {
-    let args = <Args as clap::Parser>::parse();
+    let Args { shared, command } = clap::Parser::parse();
     let theme = Theme::default_term();
 
-    match args.command {
-        Command::Status { verbose } => {
-            let logix = Logix::load(Env::init()?)?;
+    match command {
+        Command::Status {} => {
+            let ctx = Context::load(theme, shared)?;
 
             println!("Status of config files:");
-            config_status(&logix, &theme, verbose)?;
+            ctx.config_status()?;
 
             println!("Status of packages:");
-            packages_status(&logix, &theme, verbose)?;
+            ctx.packages_status()?;
         }
-        Command::ConfigStatus { verbose } => {
-            let logix = Logix::load(Env::init()?)?;
-            config_status(&logix, &theme, verbose)?;
+        Command::ConfigStatus {} => {
+            let ctx = Context::load(theme, shared)?;
+            ctx.config_status()?;
         }
-        Command::PackageStatus { package, verbose } => {
-            let logix = Logix::load(Env::init()?)?;
+        Command::PackageStatus { package } => {
+            let ctx = Context::load(theme, shared)?;
             if let Some(package) = package {
-                package_status(&logix, &theme, verbose, &package)?;
+                ctx.package_status(&package)?;
             } else {
-                packages_status(&logix, &theme, verbose)?;
+                ctx.packages_status()?;
             }
         }
-        Command::Plan {} => {
-            let _logix = Logix::load(Env::init()?)?;
+        Command::UpdateConfig {} => {
+            let ctx = Context::load(theme, shared)?;
+            ctx.update_config()?;
         }
         Command::NewConfig {
             ref username,
@@ -179,8 +221,8 @@ fn main() -> logix::error::Result<()> {
         Command::Print {
             cmd: PrintCmd::Config {},
         } => {
-            let logix = Logix::load(Env::init()?)?;
-            println!("{:#?}", logix.config());
+            let ctx = Context::load(theme, shared)?;
+            writeln!(ctx, "{:#?}", ctx.logix.config());
         }
     }
 

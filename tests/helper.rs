@@ -12,7 +12,7 @@ struct Inner {
     home: BasedPath,
     local_config: BasedPath,
     logix_config: BasedPath,
-    logix_dotfiles: BasedPath,
+    //logix_dotfiles: BasedPath,
     _root: tempfile::TempDir,
 }
 
@@ -27,14 +27,14 @@ impl TestFs {
         let local_config = home.join(".config").unwrap();
         let logix_root = local_config.join("logix").unwrap().rebased();
         let logix_config = logix_root.join("config").unwrap();
-        let logix_dotfiles = logix_root.join("dotfiles").unwrap();
+        //let logix_dotfiles = logix_root.join("dotfiles").unwrap();
 
         let fs = TestFs {
             inner: Rc::new(Inner {
                 home,
                 local_config,
                 logix_config,
-                logix_dotfiles,
+                //logix_dotfiles,
                 _root: root,
             }),
         };
@@ -80,6 +80,7 @@ impl TestFs {
         )
     }
 
+    /*
     pub fn managed_logix_dotfile(&self, owner: Owner, name: &str) -> ManagedFile {
         ManagedFile::Local(
             owner,
@@ -93,6 +94,7 @@ impl TestFs {
             },
         )
     }
+    */
 }
 
 pub struct Loaded<T> {
