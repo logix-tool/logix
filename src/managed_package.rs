@@ -1,23 +1,23 @@
 use std::sync::Arc;
 
-use time::OffsetDateTime;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     config::Package, error::Error, github::GitHubRepo, helpers, system_state::SystemState,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum PackageVersion {
     /// The package does not exist
     None,
     Commit {
         id: String,
-        date: OffsetDateTime,
+        date: jiff::Timestamp,
     },
     Semver(semver::Version),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackageStatus {
     /// The version installed locally
     pub installed_version: PackageVersion,
@@ -68,9 +68,9 @@ impl<'a> ManagedPackage<'a> {
                 let crate_name = crate_name.as_deref().unwrap_or(&self.name);
 
                 Ok(PackageStatus {
-                    installed_version: state.cargo.package_version(crate_name),
+                    installed_version: state.cargo_package_version(crate_name)?,
                     downloaded_version: PackageVersion::None,
-                    latest_version: helpers::cargo::latest_package_version(crate_name)?,
+                    latest_version: state.cargo_latest_package_version(crate_name)?,
                 })
             }
             Package::Custom {
@@ -82,7 +82,7 @@ impl<'a> ManagedPackage<'a> {
                 downloaded_version: PackageVersion::None,
                 latest_version: match source {
                     crate::config::Source::GitHub { owner, repo } => {
-                        let gh = GitHubRepo::new(owner, repo);
+                        let gh = GitHubRepo::new(owner, repo, state);
                         let info = gh.get_info()?;
                         let branch = gh.get_branch_info(&info.default_branch)?;
                         PackageVersion::Commit {

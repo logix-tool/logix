@@ -1,5 +1,7 @@
 #![deny(warnings, clippy::all)]
 
+use std::path::PathBuf;
+
 use logix::{
     config::Shell,
     error::Error,
@@ -25,6 +27,14 @@ struct SharedArgs {
 struct Args {
     #[clap(flatten)]
     shared: SharedArgs,
+
+    /// Specify the current log level
+    #[clap(long, short = 'l', global(true), default_value = "warn")]
+    log_level: log::LevelFilter,
+
+    /// Log to the specified file, defaults to stderr
+    #[clap(long, global(true))]
+    log_file: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Command,
@@ -98,7 +108,7 @@ impl Context {
         &'a self,
         it: impl Iterator<Item = ManagedPackage<'a>>,
     ) -> Result<(), Error> {
-        let state = SystemState::init()?;
+        let state = SystemState::init(self.logix.env())?;
 
         writeln!(
             self,
@@ -169,7 +179,7 @@ impl Context {
     }
 
     pub fn install_updates(&self) -> Result<(), Error> {
-        let mut state = SystemState::init()?;
+        let mut state = SystemState::init(self.logix.env())?;
         for package in self.logix.iter_packages() {
             if package.is_custom() {
                 // TODO: Add support for custom packages
@@ -204,7 +214,25 @@ impl Context {
 }
 
 fn main() -> logix::error::Result<()> {
-    let Args { shared, command } = clap::Parser::parse();
+    let Args {
+        shared,
+        log_level,
+        log_file,
+        command,
+    } = clap::Parser::parse();
+
+    let mut logger = flexi_logger::Logger::with(log_level);
+
+    logger = if let Some(path) = log_file {
+        logger.log_to_file(flexi_logger::FileSpec::try_from(path).unwrap())
+    } else {
+        logger
+            .log_to_stderr()
+            .adaptive_format_for_stderr(flexi_logger::AdaptiveFormat::Default)
+    };
+
+    logger.start().unwrap();
+
     let theme = Theme::default_term();
 
     match command {

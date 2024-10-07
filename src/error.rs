@@ -65,6 +65,12 @@ pub enum Error {
 
     #[error("Failed to run command {0:?}: {1}")]
     ShellCommandFailed(&'static str, String),
+
+    #[error("Curl failed: {0}")]
+    CurlError(curl::Error),
+
+    #[error("Failed to read cached entry {0:?} for file {1:?}: {2}")]
+    ReadForCache(String, BasedPath, String),
 }
 
 impl fmt::Debug for Error {

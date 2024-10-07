@@ -8,6 +8,7 @@ use managed_package::ManagedPackage;
 use std::fmt::Write as _;
 
 pub mod based_path;
+mod cache;
 pub mod config;
 pub mod env;
 pub mod error;
@@ -17,6 +18,7 @@ pub mod managed_file;
 pub mod managed_files;
 pub mod managed_package;
 pub mod system_state;
+mod url_fetch;
 mod walk_dir;
 
 /// This is the root of a logix session. Most functionality will start

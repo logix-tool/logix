@@ -67,49 +67,49 @@ impl CargoState {
         *self = Self::init()?;
         Ok(())
     }
-}
 
-pub fn latest_package_version(name: &str) -> Result<PackageVersion, Error> {
-    let res = Command::new("cargo")
-        .arg("search")
-        .arg("--limit=1")
-        .arg(name)
-        .output()
-        .map_err(|e| e.to_string())
-        .and_then(|res| {
-            if res.status.success() {
-                Ok(res.stdout)
-            } else {
-                Err(format!("returned status {}", res.status))
-            }
-        })
-        .map_err(|e| Error::ShellCommandFailed("cargo search --limit=1", e.to_string()))?;
-
-    for line in String::from_utf8_lossy(&res).lines().take(1) {
-        if let Some((got_name, remain)) = line.split_once(" = \"") {
-            if let Some((version, remain)) = remain.split_once('"') {
-                if name
-                    .chars()
-                    .map(package_name_char)
-                    .eq(got_name.chars().map(package_name_char))
-                {
-                    return Ok(parse_version(version));
+    pub fn latest_package_version(&self, name: &str) -> Result<PackageVersion, Error> {
+        let res = Command::new("cargo")
+            .arg("search")
+            .arg("--limit=1")
+            .arg(name)
+            .output()
+            .map_err(|e| e.to_string())
+            .and_then(|res| {
+                if res.status.success() {
+                    Ok(res.stdout)
                 } else {
-                    todo!("{got_name:?}, {version:?}, {remain:?}")
+                    Err(format!("returned status {}", res.status))
+                }
+            })
+            .map_err(|e| Error::ShellCommandFailed("cargo search --limit=1", e.to_string()))?;
+
+        for line in String::from_utf8_lossy(&res).lines().take(1) {
+            if let Some((got_name, remain)) = line.split_once(" = \"") {
+                if let Some((version, remain)) = remain.split_once('"') {
+                    if name
+                        .chars()
+                        .map(package_name_char)
+                        .eq(got_name.chars().map(package_name_char))
+                    {
+                        return Ok(parse_version(version));
+                    } else {
+                        todo!("{got_name:?}, {version:?}, {remain:?}")
+                    }
+                } else {
+                    todo!("{got_name:?}, {remain:?}")
                 }
             } else {
-                todo!("{got_name:?}, {remain:?}")
+                todo!("{line:?}")
             }
-        } else {
-            todo!("{line:?}")
         }
-    }
 
-    Ok(PackageVersion::None)
+        Ok(PackageVersion::None)
+    }
 }
 
 fn parse_version(version: &str) -> PackageVersion {
-    if let Ok(ver) = semver::Version::parse(version.strip_prefix("v").unwrap_or(version)) {
+    if let Ok(ver) = semver::Version::parse(version.strip_prefix('v').unwrap_or(version)) {
         PackageVersion::Semver(ver)
     } else {
         todo!("{version:?}")

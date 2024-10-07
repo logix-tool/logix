@@ -70,6 +70,8 @@ impl EnvBuilder {
 
         let logix_root = user_config_dir.join("logix")?.rebased();
 
+        let user_cache = user_dir.join(".cache")?;
+
         Ok(Env {
             user_config: ShadowedDir {
                 local: user_config_dir.clone(),
@@ -81,6 +83,8 @@ impl EnvBuilder {
             },
 
             logix_root,
+
+            user_cache,
         })
     }
 
@@ -99,6 +103,9 @@ pub struct Env {
 
     /// ~/.config/logix
     logix_root: BasedPath,
+
+    /// ~/.cache
+    user_cache: BasedPath,
 }
 
 impl Env {
@@ -126,5 +133,10 @@ impl Env {
     /// logix directory such as `~/.config/helix/dotfiles`
     pub fn dotfiles(&self) -> &ShadowedDir {
         &self.dotfiles
+    }
+
+    /// Returns the cache directory of the current user such as `~/.cache`
+    pub fn user_cache(&self) -> &BasedPath {
+        &self.user_cache
     }
 }

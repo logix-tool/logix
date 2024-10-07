@@ -1,5 +1,6 @@
 use std::{
     ffi::OsStr,
+    fmt,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -9,7 +10,7 @@ use logix_type::types::FullPath;
 use crate::error::Error;
 
 /// Represents a relative path with a base, so it can be both absolute and relative.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BasedPath {
     base: Arc<FullPath>,
     path: Option<FullPath>,
@@ -107,5 +108,11 @@ impl From<BasedPath> for PathBuf {
             .path
             .unwrap_or_else(|| value.base.as_ref().clone())
             .into()
+    }
+}
+
+impl fmt::Debug for BasedPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.rel_path(), f)
     }
 }

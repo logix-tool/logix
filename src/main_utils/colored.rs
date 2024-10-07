@@ -6,7 +6,6 @@ use logix::{
     managed_package::PackageVersion,
 };
 use owo_colors::{AnsiColors, DynColor, OwoColorize};
-use time::macros::format_description;
 
 use super::theme::Theme;
 
@@ -143,9 +142,7 @@ pub fn package_version<'a>(
                     fmt::Display::fmt(&"<none>".color(self.theme.package_version_none), f)
                 }
                 PackageVersion::Commit { id: _, date } => {
-                    let tmp = &date
-                        .format(&format_description!("[year]-[month]-[day] [hour]:[minute]"))
-                        .unwrap();
+                    let tmp = date.strftime("%Y-%m-%d %H:%M");
                     fmt::Display::fmt(&tmp.color(self.theme.package_version_date), f)
                 }
                 PackageVersion::Semver(ver) => {

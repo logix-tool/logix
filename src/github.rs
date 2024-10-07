@@ -1,14 +1,15 @@
-use serde::{de::DeserializeOwned, Deserialize};
+use jiff::ToSpan;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, system_state::SystemState, url_fetch::UrlFetch};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubOwner {
     //pub login: String,
     //pub url: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubRepoInfo {
     //pub name: String,
     //pub full_name: String,
@@ -18,69 +19,61 @@ pub struct GitHubRepoInfo {
     pub default_branch: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubBranchInfo {
     //pub name: String,
     pub commit: GitHubCommit,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubCommit {
     pub sha: String,
     pub commit: GitHubCommitInfo,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubCommitInfo {
     pub author: GitHubCommitAuthor,
     //pub committer: GitHubCommitAuthor,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct GitHubCommitAuthor {
     //pub name: String,
     //pub email: String,
-    #[serde(deserialize_with = "time::serde::rfc3339::deserialize")]
-    pub date: time::OffsetDateTime,
+    pub date: jiff::Timestamp,
 }
 
-pub struct GitHubRepo {
+pub struct GitHubRepo<'state> {
     base_url: String,
+    base_key: String,
+    state: &'state SystemState,
 }
 
-impl GitHubRepo {
-    pub fn new(owner: &str, repo: &str) -> Self {
+impl<'state> GitHubRepo<'state> {
+    pub fn new(owner: &str, repo: &str, state: &'state SystemState) -> Self {
         Self {
             base_url: format!("https://api.github.com/repos/{owner}/{repo}"),
+            base_key: format!("github-repo/{owner}/{repo}"),
+            state,
         }
     }
 
     fn get<T: DeserializeOwned>(&self, url: String) -> Result<T, Error> {
-        match ureq::get(&url).call() {
-            Ok(res) => {
-                if res.status() == 200 {
-                    res.into_json()
-                        .map_err(|e| Error::HttpRequestJson(url, e.to_string()))
-                } else {
-                    Err(Error::HttpRequest(
-                        url,
-                        format!(
-                            "Server returned status {} - {}",
-                            res.status(),
-                            res.status_text()
-                        ),
-                    ))
-                }
-            }
-            Err(e) => Err(Error::HttpRequest(url, e.to_string())),
-        }
+        UrlFetch::new(&url)?.get()?.json()
     }
 
     pub fn get_info(&self) -> Result<GitHubRepoInfo, Error> {
-        self.get(self.base_url.clone())
+        self.state
+            .cached(&format!("{}/info", self.base_key), 1.hour(), || {
+                self.get(self.base_url.clone())
+            })
     }
 
     pub fn get_branch_info(&self, branch: &str) -> Result<GitHubBranchInfo, Error> {
-        self.get(format!("{}/branches/{branch}", self.base_url))
+        self.state
+            .cached(&format!("{}/branch_info", self.base_key), 1.hour(), || {
+                self.get(format!("{}/branches/{branch}", self.base_url))
+            })
     }
 }
