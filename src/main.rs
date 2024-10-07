@@ -205,8 +205,7 @@ impl Context {
                     );
                 }
 
-                package.install_update()?;
-                state.refresh_state()?;
+                package.install_update(&mut state)?;
             }
         }
         Ok(())

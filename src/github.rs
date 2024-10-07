@@ -1,7 +1,7 @@
 use jiff::ToSpan;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{error::Error, system_state::SystemState, url_fetch::UrlFetch};
+use crate::{cache::Cache, error::Error, url_fetch::UrlFetch};
 
 #[derive(Serialize, Deserialize)]
 pub struct GitHubOwner {
@@ -44,18 +44,18 @@ pub struct GitHubCommitAuthor {
     pub date: jiff::Timestamp,
 }
 
-pub struct GitHubRepo<'state> {
+pub struct GitHubRepo {
     base_url: String,
     base_key: String,
-    state: &'state SystemState,
+    cache: Cache,
 }
 
-impl<'state> GitHubRepo<'state> {
-    pub fn new(owner: &str, repo: &str, state: &'state SystemState) -> Self {
+impl GitHubRepo {
+    pub fn new(owner: &str, repo: &str, cache: &Cache) -> Self {
         Self {
             base_url: format!("https://api.github.com/repos/{owner}/{repo}"),
             base_key: format!("github-repo/{owner}/{repo}"),
-            state,
+            cache: cache.clone(),
         }
     }
 
@@ -64,15 +64,15 @@ impl<'state> GitHubRepo<'state> {
     }
 
     pub fn get_info(&self) -> Result<GitHubRepoInfo, Error> {
-        self.state
-            .cached(&format!("{}/info", self.base_key), 1.hour(), || {
+        self.cache
+            .get_or_insert(&format!("{}/info", self.base_key), 1.hour(), || {
                 self.get(self.base_url.clone())
             })
     }
 
     pub fn get_branch_info(&self, branch: &str) -> Result<GitHubBranchInfo, Error> {
-        self.state
-            .cached(&format!("{}/branch_info", self.base_key), 1.hour(), || {
+        self.cache
+            .get_or_insert(&format!("{}/branch_info", self.base_key), 1.hour(), || {
                 self.get(format!("{}/branches/{branch}", self.base_url))
             })
     }

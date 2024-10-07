@@ -3,7 +3,8 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::Package, error::Error, github::GitHubRepo, helpers, system_state::SystemState,
+    config::Package, error::Error, github::GitHubRepo, helpers::cargo::CrateSpec,
+    system_state::SystemState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -62,15 +63,17 @@ impl<'a> ManagedPackage<'a> {
         match self.package {
             Package::RustCrate {
                 crate_name,
+                source,
                 config_dir: _,
                 environment: _,
             } => {
-                let crate_name = crate_name.as_deref().unwrap_or(&self.name);
+                let crate_spec =
+                    CrateSpec::new(crate_name.as_deref().unwrap_or(&self.name), source.as_ref());
 
                 Ok(PackageStatus {
-                    installed_version: state.cargo_package_version(crate_name)?,
+                    installed_version: state.cargo_package_version(&crate_spec)?,
                     downloaded_version: PackageVersion::None,
-                    latest_version: state.cargo_latest_package_version(crate_name)?,
+                    latest_version: state.cargo_latest_package_version(&crate_spec)?,
                 })
             }
             Package::Custom {
@@ -82,7 +85,7 @@ impl<'a> ManagedPackage<'a> {
                 downloaded_version: PackageVersion::None,
                 latest_version: match source {
                     crate::config::Source::GitHub { owner, repo } => {
-                        let gh = GitHubRepo::new(owner, repo, state);
+                        let gh = GitHubRepo::new(owner, repo, state.cache());
                         let info = gh.get_info()?;
                         let branch = gh.get_branch_info(&info.default_branch)?;
                         PackageVersion::Commit {
@@ -95,15 +98,17 @@ impl<'a> ManagedPackage<'a> {
         }
     }
 
-    pub fn install_update(&self) -> Result<PackageVersion, Error> {
+    pub fn install_update(&self, state: &mut SystemState) -> Result<PackageVersion, Error> {
         match self.package {
             Package::RustCrate {
                 crate_name,
+                source,
                 config_dir: _,
                 environment: _,
             } => {
-                let crate_name = crate_name.as_deref().unwrap_or(&self.name);
-                helpers::cargo::install_package(crate_name)
+                let crate_spec =
+                    CrateSpec::new(crate_name.as_deref().unwrap_or(&self.name), source.as_ref());
+                state.cargo_install_package(&crate_spec)
             }
             Package::Custom { .. } => todo!(),
         }

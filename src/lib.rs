@@ -81,6 +81,7 @@ impl Logix {
                 match p {
                     Package::RustCrate {
                         crate_name: _,
+                        source: _,
                         config_dir,
                         environment: _,
                     }

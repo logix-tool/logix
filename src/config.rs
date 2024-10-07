@@ -61,6 +61,28 @@ pub enum ConfigDir {
     },
 }
 
+/// Source of a rust package if it is not crates.io
+#[derive(Debug, LogixType, PartialEq, Eq)]
+pub enum RustCrateSource {
+    GithubBranch {
+        owner: String,
+        repo: String,
+        branch: String,
+    },
+
+    GithubTag {
+        owner: String,
+        repo: String,
+        tag: String,
+    },
+
+    GithubRevision {
+        owner: String,
+        repo: String,
+        revision: String,
+    },
+}
+
 /// A package of various types that is managed by logix
 #[derive(Debug, LogixType, PartialEq, Eq)]
 pub enum Package {
@@ -68,8 +90,13 @@ pub enum Package {
     RustCrate {
         /// Name of the crate as recognized by cargo and crates.io, defaults to the package name
         crate_name: Option<ShortStr>,
+
+        /// Source for the package if not crates.io
+        source: Option<RustCrateSource>,
+
         /// Specified the config files that needs to be managed by this package
         config_dir: Option<ConfigDir>,
+
         /// Environment variables that will be set
         environment: Map<String>,
     },
